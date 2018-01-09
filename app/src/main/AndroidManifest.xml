@@ -3,6 +3,10 @@
     package="com.example.idealidea_03.sociallogin">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!--Google Login-->
+    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <!-- To use account credentials -->
+    <uses-permission android:name="android.permission.USE_CREDENTIALS" />
 
     <!--Kakao name entry 추가-->
     <application
@@ -32,6 +36,11 @@
         <meta-data
             android:name="com.facebook.sdk.ApplicationId"
             android:value="@string/facebook_app_id" />
+
+        <!--Google Login-->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
 
         <activity
             android:name="com.facebook.FacebookActivity"

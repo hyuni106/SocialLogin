@@ -21,10 +21,18 @@ import com.google.android.gms.auth.api.signin.GoogleSignInAccount;
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.auth.api.signin.GoogleSignInResult;
 import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.Scopes;
 import com.google.android.gms.common.SignInButton;
 import com.google.android.gms.common.api.GoogleApi;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.Scope;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.AuthCredential;
+import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.GoogleAuthProvider;
 import com.kakao.auth.ISessionCallback;
 import com.kakao.auth.Session;
 import com.kakao.network.ErrorResult;
@@ -42,7 +50,9 @@ import org.json.JSONObject;
 
 import static com.nhn.android.naverlogin.OAuthLogin.mOAuthLoginHandler;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends AppCompatActivity implements GoogleApiClient.OnConnectionFailedListener {
+    String loginSns = "";
+
     //    Facebook
     CallbackManager callbackManager;
     ProfileTracker pt;
@@ -59,6 +69,7 @@ public class LoginActivity extends AppCompatActivity {
     String OAUTH_CLIENT_NAME = "SocialLoginTest";
 
 //    Google
+    private FirebaseAuth mAuth;
     GoogleApiClient mGoogleApiClient;
     int RC_SIGN_IN = 1001;
 
@@ -103,6 +114,7 @@ public class LoginActivity extends AppCompatActivity {
 //                            currentProfile.getId(),
 //                            currentProfile.getName(),
 //                            currentProfile.getProfilePictureUri(500,500).toString());
+                    loginSns = "Facebook";
                     Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                     intent.putExtra("loginInfo", "1");
                     startActivity(intent);
@@ -141,12 +153,23 @@ public class LoginActivity extends AppCompatActivity {
         });
 
 //        Google
+//        setGoogleLogin();
+        FirebaseAuth.getInstance().signOut();
+        GoogleSignInOptions gso = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN).requestProfile().requestId()
+                .requestEmail().requestScopes(new Scope(Scopes.PLUS_ME))
+                .requestScopes(new Scope(Scopes.PLUS_LOGIN))
+                .build();
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .enableAutoManage(this, this /* OnConnectionFailedListener */)
+                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+                .build();
+
         SignInButton signInButton = (SignInButton) findViewById(R.id.google_login);
 //        signInButton.setSize(SignInButton.SIZE_STANDARD);
         signInButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
+                loginSns = "Google";
                 Intent signInIntent = Auth.GoogleSignInApi.getSignInIntent(mGoogleApiClient);
                 startActivityForResult(signInIntent, RC_SIGN_IN);
             }
@@ -164,46 +187,62 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (loginSns.equals("Kakao")) {
 //        Kakao
-        if (Session.getCurrentSession().handleActivityResult(requestCode, resultCode, data)) {
-            return;
+            if (Session.getCurrentSession().handleActivityResult(requestCode, resultCode, data)) {
+                return;
+            }
         }
-//        Facebook
-        callbackManager.onActivityResult(requestCode, resultCode, data);
-
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (requestCode == RC_SIGN_IN) {
-            GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
+        if (loginSns.equals("Google")) {
+//        Google
+            if (requestCode == RC_SIGN_IN) {
+                GoogleSignInResult result = Auth.GoogleSignInApi.getSignInResultFromIntent(data);
 
-            if (result != null) {
-                if (result.isSuccess()) {
+                if (result != null) {
+                    if (result.isSuccess()) {
 
-// 로그인 성공 했을때
-                    GoogleSignInAccount acct = result.getSignInAccount();
+                        // 로그인 성공 했을때
+                        GoogleSignInAccount acct = result.getSignInAccount();
 
-                    String personName = acct.getDisplayName();
-                    String personEmail = acct.getEmail();
-                    String personId = acct.getId();
-                    String tokenKey = acct.getServerAuthCode();
+                        String personName = acct.getDisplayName();
+                        String personEmail = acct.getEmail();
+                        String personId = acct.getId();
+                        String tokenKey = acct.getServerAuthCode();
 
-                    mGoogleApiClient.disconnect();
-
-
-                    Log.e("GoogleLogin", "personName=" + personName);
-                    Log.e("GoogleLogin", "personEmail=" + personEmail);
-                    Log.e("GoogleLogin", "personId=" + personId);
-                    Log.e("GoogleLogin", "tokenKey=" + tokenKey);
+                        mGoogleApiClient.disconnect();
 
 
-                } else {
-                    Log.e("GoogleLogin", "login fail cause=" + result.getStatus().getStatusMessage());
-                    // 로그인 실패 했을때
+                        Log.e("GoogleLogin", "personName=" + personName);
+                        Log.e("GoogleLogin", "personEmail=" + personEmail);
+                        Log.e("GoogleLogin", "personId=" + personId);
+                        Log.e("GoogleLogin", "tokenKey=" + tokenKey);
+
+//                        firebaseAuthWithGoogle(acct);
+                        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+                        intent.putExtra("loginInfo", "4");
+                        startActivity(intent);
+                        finish();
+                        Toast.makeText(LoginActivity.this, personName + "님 로그인 완료", Toast.LENGTH_SHORT).show();
+
+                    } else {
+                        Log.e("GoogleLogin", "login fail cause=" + result.getStatus().getStatusMessage());
+                        // 로그인 실패 했을때
+                    }
                 }
             }
-        } else {
-
         }
+
+        if (loginSns.equals("Facebook")) {
+//        Facebook
+            callbackManager.onActivityResult(requestCode, resultCode, data);
+        }
+    }
+
+    @Override
+    public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
+
     }
 
     //        Kakao
@@ -221,7 +260,6 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    //    Kakao
     protected void redirectSignupActivity() {
         UserManagement.requestMe(new MeResponseCallback() {
             @Override
@@ -241,7 +279,7 @@ public class LoginActivity extends AppCompatActivity {
 //                        "없음",
 //                        result.getNickname(),
 //                        result.getProfileImagePath());
-
+                loginSns = "Kakao";
                 Intent intent = new Intent(LoginActivity.this, MainActivity.class);
                 intent.putExtra("loginInfo", "2");
                 startActivity(intent);
@@ -270,5 +308,37 @@ public class LoginActivity extends AppCompatActivity {
                         } /* OnConnectionFailedListener */)
                 .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
                 .build();
+
+//        mGoogleApiClient = new GoogleApiClient.Builder(this)
+//                .enableAutoManage(this /* FragmentActivity */,  this /* OnConnectionFailedListener */)
+//                .addApi(Auth.GOOGLE_SIGN_IN_API, gso)
+//                .build();
+    }
+
+    private void firebaseAuthWithGoogle(GoogleSignInAccount acct) {
+        mAuth = FirebaseAuth.getInstance();
+        Log.d("Google", "firebaseAuthWithGoogle:" + acct.getId());
+
+        AuthCredential credential = GoogleAuthProvider.getCredential(acct.getIdToken(), null);
+        mAuth.signInWithCredential(credential)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            // Sign in success, update UI with the signed-in user's information
+                            Log.d("Google", "signInWithCredential:success");
+                            FirebaseUser user = mAuth.getCurrentUser();
+//                            updateUI(user);
+                        } else {
+                            // If sign in fails, display a message to the user.
+                            Log.w("Google", "signInWithCredential:failure", task.getException());
+                            Toast.makeText(LoginActivity.this, "Authentication failed.",
+                                    Toast.LENGTH_SHORT).show();
+//                            updateUI(null);
+                        }
+
+                        // ...
+                    }
+                });
     }
 }

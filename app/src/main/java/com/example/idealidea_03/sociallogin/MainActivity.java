@@ -12,6 +12,7 @@ import android.view.View;
 import android.widget.Button;
 
 import com.facebook.login.LoginManager;
+import com.google.firebase.auth.FirebaseAuth;
 import com.kakao.usermgmt.UserManagement;
 import com.kakao.usermgmt.callback.LogoutResponseCallback;
 import com.nhn.android.naverlogin.OAuthLogin;
@@ -54,6 +55,8 @@ public class MainActivity extends AppCompatActivity {
                 } else if (loginInfo.equals("3")) {
 //                네이버 로그아웃
                     OAuthLogin.getInstance().logout(MainActivity.this);
+                } else {
+                    FirebaseAuth.getInstance().signOut();
                 }
 
                 redirectLoginActivity();
